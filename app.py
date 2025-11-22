@@ -1,38 +1,22 @@
-import ffmpeg
-import cv2
+GEMINI_API_KEY = 'AIzaSyDdAQGzJ0nHkfixQn5kGETA-oKKwn9skew'
 
-input_video = "./media/sample_vid1.mp4"
-output_pattern = "./media/frames/frame_%04d.png" # Output directory and file naming pattern
+from google import genai
+from PIL import Image
 
-(
-    ffmpeg
-    .input(input_video) # Capture one frame every second
-    .output(output_pattern, vf = "fps=1")
-    .run()
+sample_image_path = './media/frames/frame_0001.png'
+
+# Load the image using the Pillow (PIL) library
+sample_image = Image.open(sample_image_path)
+
+# The client gets the API key from the environment variable `GEMINI_API_KEY`.
+client = genai.Client(api_key=GEMINI_API_KEY)
+
+response = client.models.generate_content(
+    model="gemini-2.5-flash", 
+    # contents="What is the difference between a partial order relation and other relations"
+    contents=[
+        sample_image,
+        "What is everything you see in this image"
+    ]
 )
-
-# To find the fps of a vidoe
-def get_video_fps(video_path):
-    """
-    Retrieves the FPS of a given video file using OpenCV.
-
-    Args:
-        video_path (str): The path to the video file.
-
-    Returns:
-        float: The FPS of the video, or -1.0 if the video cannot be opened.
-    """
-    cap = cv2.VideoCapture(video_path)
-
-    if not cap.isOpened():
-        print(f"Error: Could not open video file at {video_path}")
-        return -1.0
-
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    cap.release()
-    return fps
-
-fps_val = get_video_fps(input_video)
-
-if fps_val != -1.0:
-    print(f"The FPS of '{input_video}' is: {fps_val}")
+print(response.text)

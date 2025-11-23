@@ -1,8 +1,13 @@
 from google import genai
 from PIL import Image
+import os
+from dotenv import load_dotenv
 
 def gemini_text():
-    GEMINI_API_KEY = 'AIzaSyCc9aGSvySxbPGd2tHT0kem-CXqxISH3a0'
+
+    load_dotenv()
+
+    gemini_api = os.getenv("GEMINI_API_KEY")
 
     sample_image_path = './media/frames/frame_0001.png'
 
@@ -10,7 +15,7 @@ def gemini_text():
     sample_image = Image.open(sample_image_path)
 
     # The client gets the API key from the environment variable `GEMINI_API_KEY`.
-    client = genai.Client(api_key=GEMINI_API_KEY)
+    client = genai.Client(api_key=gemini_api)
 
     prompt = """"You are a highly perceptive and efficient descriptive guide. Your task is 
     to provide a real-time, evocative audio description of the user's immediate surroundings. 

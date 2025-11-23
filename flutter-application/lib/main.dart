@@ -140,9 +140,62 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // TOP SECTION: Location Information
+            // TOP SECTION: Camera Feed with 9:20 aspect ratio (vertical)
             Expanded(
               flex: 3,
+              child: Container(
+                color: Colors.black,
+                child: Center(
+                  child: AspectRatio(
+                    aspectRatio: 9 / 20, // 9:20 aspect ratio for vertical video
+                    child: controller != null && controller!.value.isInitialized
+                        ? ClipRect(
+                            child: FittedBox(
+                              fit: BoxFit.cover,
+                              child: SizedBox(
+                                width: controller!.value.previewSize!.width,
+                                height: controller!.value.previewSize!.height,
+                                child: CameraPreview(controller!),
+                              ),
+                            ),
+                          )
+                        : Container(
+                            color: Colors.black,
+                            child: const Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  CircularProgressIndicator(color: Colors.white),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    'Initializing camera...',
+                                    style: TextStyle(color: Colors.white70),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+            ),
+            
+            // Divider
+            Container(
+              height: 2,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF667eea),
+                    const Color(0xFF764ba2),
+                  ],
+                ),
+              ),
+            ),
+            
+            // BOTTOM SECTION: Location Information
+            Expanded(
+              flex: 2,
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(20),
@@ -316,59 +369,6 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                     ),
                   ],
-                ),
-              ),
-            ),
-            
-            // Divider
-            Container(
-              height: 2,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    const Color(0xFF667eea),
-                    const Color(0xFF764ba2),
-                  ],
-                ),
-              ),
-            ),
-            
-            // BOTTOM SECTION: Camera Feed with 20:9 aspect ratio
-            Expanded(
-              flex: 2,
-              child: Container(
-                color: Colors.black,
-                child: Center(
-                  child: AspectRatio(
-                    aspectRatio: 20 / 9, // 20:9 aspect ratio to prevent stretching
-                    child: controller != null && controller!.value.isInitialized
-                        ? ClipRect(
-                            child: FittedBox(
-                              fit: BoxFit.cover,
-                              child: SizedBox(
-                                width: controller!.value.previewSize!.height,
-                                height: controller!.value.previewSize!.width,
-                                child: CameraPreview(controller!),
-                              ),
-                            ),
-                          )
-                        : Container(
-                            color: Colors.black,
-                            child: const Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  CircularProgressIndicator(color: Colors.white),
-                                  SizedBox(height: 16),
-                                  Text(
-                                    'Initializing camera...',
-                                    style: TextStyle(color: Colors.white70),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                  ),
                 ),
               ),
             ),

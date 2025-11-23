@@ -168,13 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
     
     try {
       await controller!.initialize();
-      _log("Camera", "Camera initialized successfully");
-      
-      if (mounted) {
-        setState(() {
-          _isCameraActive = true;
-        });
-      }
+      _log("Camera", "Camera initialized successfully (inactive on startup)");
     } catch (e) {
       _log("Camera", "Camera initialization error: $e");
     }

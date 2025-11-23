@@ -19,14 +19,17 @@ class GeminiService {
 
     // Build the prompt with POI data
     final prompt = _buildPrompt(pois);
+    print("Gemini: Sending prompt with ${pois.length} POIs");
 
     try {
       final content = [Content.text(prompt)];
       final response = await _model.generateContent(content);
 
       if (response.text != null && response.text!.isNotEmpty) {
+        print("Gemini: Successfully generated conversational text (${response.text!.length} chars)");
         return response.text!;
       } else {
+        print("Gemini: Empty response from API");
         return "I couldn't generate a description at this time.";
       }
     } catch (e) {

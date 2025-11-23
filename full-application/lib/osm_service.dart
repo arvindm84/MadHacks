@@ -20,6 +20,8 @@ class OSMService {
   final String overpassEndpoint = 'https://overpass-api.de/api/interpreter';
 
   Future<List<POI>> getNearbyPOIs(double lat, double lon, {int radius = 100}) async {
+    print("OSM: Fetching POIs for location ($lat, $lon) with radius $radius meters");
+    
     // Query logic ported from openstreetmap.js
     final query = '''
       [out:json][timeout:25];
@@ -41,15 +43,19 @@ class OSMService {
     ''';
 
     try {
+      print("OSM: Sending request to $overpassEndpoint");
       final response = await http.post(
         Uri.parse(overpassEndpoint),
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: 'data=${Uri.encodeComponent(query)}',
       );
 
+      print("OSM: Response status code: ${response.statusCode}");
+      
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final elements = data['elements'] as List;
+        print("OSM: Received ${elements.length} elements from Overpass API");
 
         List<POI> pois = [];
 
@@ -87,7 +93,10 @@ class OSMService {
 
         // Sort by distance
         pois.sort((a, b) => a.distance.compareTo(b.distance));
+        print("OSM: Returning ${pois.length} POIs (sorted by distance)");
         return pois;
+      } else {
+        print("OSM Error: Status ${response.statusCode}, Body: ${response.body}");
       }
     } catch (e) {
       print("OSM Error: $e");

@@ -56,8 +56,9 @@ class _HomeScreenState extends State<HomeScreen> {
   String _statusText = "Initializing...";
   List<POI> _nearbyPOIs = [];
   bool _isScanning = false;
-  bool _isCameraActive = false; // Controls camera display
-  Timer? _scanTimer;
+  bool _isCameraActive = false;
+  Timer? _osmTimer;
+  Timer? _geminiTimer;
   Position? _currentPosition;
 
   @override
@@ -89,16 +90,27 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       _isScanning = true;
+      _isCameraActive = true;
       _statusText = "Ready";
     });
 
-    // Start periodic scan (every 5 seconds) - runs in background
-    _scanTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
-      _performScan();
+    // Start OSM POI scanning every 5 seconds
+    _osmTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      _fetchPOIs();
     });
 
-    // Perform first scan immediately
-    _performScan();
+    // Start Gemini + Fish Audio pipeline every 60 seconds
+    _geminiTimer = Timer.periodic(const Duration(seconds: 60), (timer) {
+      _processWithGeminiAndAudio();
+    });
+
+    // Perform first POI fetch immediately
+    _fetchPOIs();
+    
+    // Perform first Gemini/Audio processing after a short delay
+    Future.delayed(const Duration(seconds: 2), () {
+      _processWithGeminiAndAudio();
+    });
   }
 
   Future<void> _requestPermissions() async {
@@ -106,19 +118,66 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _initCamera() async {
-    if (_cameras.isEmpty) return;
+    if (_cameras.isEmpty) {
+      print("No cameras available");
+      return;
+    }
 
-    // Select back camera (environment)
-    controller = CameraController(_cameras.first, ResolutionPreset.high);
-    await controller!.initialize();
-    if (mounted) setState(() {});
+    // Select back camera (rear-facing)
+    final backCamera = _cameras.firstWhere(
+      (camera) => camera.lensDirection == CameraLensDirection.back,
+      orElse: () => _cameras.first,
+    );
+    
+    controller = CameraController(
+      backCamera, 
+      ResolutionPreset.high,
+      enableAudio: false,
+    );
+    
+    try {
+      await controller!.initialize();
+      print("Camera initialized successfully");
+      if (mounted) setState(() {});
+    } catch (e) {
+      print("Camera initialization error: $e");
+    }
   }
 
   Future<void> _startLocationTracking() async {
+    // Check if location services are enabled
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      setState(() => _statusText = "Location services disabled");
+      print("Location services are disabled");
+      setState(() => _statusText = "Location services disabled. Please enable location.");
       return;
+    }
+
+    // Check location permissions
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        print("Location permission denied");
+        setState(() => _statusText = "Location permission denied");
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      print("Location permission denied forever");
+      setState(() => _statusText = "Location permission permanently denied");
+      return;
+    }
+
+    // Get initial position
+    try {
+      _currentPosition = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      print("Initial position: ${_currentPosition!.latitude}, ${_currentPosition!.longitude}");
+    } catch (e) {
+      print("Error getting initial position: $e");
     }
 
     // Listen to location stream
@@ -129,34 +188,85 @@ class _HomeScreenState extends State<HomeScreen> {
         )
     ).listen((Position position) {
       _currentPosition = position;
+      print("Position update: ${position.latitude}, ${position.longitude}");
     });
   }
 
-  Future<void> _performScan() async {
-    if (!mounted || _currentPosition == null) return;
+  /// Fetch POIs from OpenStreetMap (called every 5 seconds)
+  Future<void> _fetchPOIs() async {
+    if (!mounted) {
+      print("fetchPOIs: Widget not mounted");
+      return;
+    }
+    
+    if (_currentPosition == null) {
+      print("fetchPOIs: No location available yet");
+      return;
+    }
+
+    print("=== Fetching POIs from OSM (5s cycle) ===");
+    print("Current location: ${_currentPosition!.latitude}, ${_currentPosition!.longitude}");
 
     try {
       // Step 1: Fetch POIs from OpenStreetMap
+      print("Fetching POIs from OpenStreetMap...");
       final results = await _osmService.getNearbyPOIs(
           _currentPosition!.latitude,
           _currentPosition!.longitude
       );
+      print("Found ${results.length} POIs from OSM");
 
       final top5 = results.take(5).toList();
+      
+      if (top5.isEmpty) {
+        print("No POIs found nearby");
+        return;
+      }
+      
+      print("Top 5 POIs: ${top5.map((p) => p.name).toList()}");
 
-      // Step 2: Convert to conversational text using Gemini
-      final conversationalText = await _geminiService.convertToConversation(top5);
-
-      // Step 3: Convert text to speech using Fish Audio
-      await _fishAudioService.textToSpeech(conversationalText);
-
+      // Update state with the latest POIs
       if (mounted) {
         setState(() {
           _nearbyPOIs = top5;
         });
       }
+      
+      print("=== OSM fetch complete ===");
     } catch (e) {
-      print("Scan error: $e");
+      print("OSM fetch error: $e");
+    }
+  }
+
+  /// Process POIs with Gemini and Fish Audio (called every 60 seconds)
+  Future<void> _processWithGeminiAndAudio() async {
+    if (!mounted) {
+      print("processWithGeminiAndAudio: Widget not mounted");
+      return;
+    }
+
+    if (_nearbyPOIs.isEmpty) {
+      print("processWithGeminiAndAudio: No POIs available to process");
+      return;
+    }
+
+    print("=== Starting Gemini + Fish Audio pipeline (60s cycle) ===");
+    print("Processing ${_nearbyPOIs.length} POIs: ${_nearbyPOIs.map((p) => p.name).toList()}");
+
+    try {
+      // Step 2: Convert to conversational text using Gemini
+      print("Step 1: Sending to Gemini API for conversational text...");
+      final conversationalText = await _geminiService.convertToConversation(_nearbyPOIs);
+      print("Gemini response: $conversationalText");
+
+      // Step 3: Convert text to speech using Fish Audio
+      print("Step 2: Sending to Fish Audio API for TTS...");
+      await _fishAudioService.textToSpeech(conversationalText);
+      print("Fish Audio TTS complete");
+      
+      print("=== Gemini + Fish Audio pipeline complete ===");
+    } catch (e) {
+      print("Gemini/Audio processing error: $e");
     }
   }
 
@@ -169,7 +279,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     controller?.dispose();
-    _scanTimer?.cancel();
+    _osmTimer?.cancel();
+    _geminiTimer?.cancel();
     _fishAudioService.dispose();
     super.dispose();
   }
@@ -180,9 +291,8 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // TOP SECTION: Camera Feed (fills naturally without aspect ratio constraints)
             Expanded(
-              flex: 4,
+              flex: 7,
               child: Container(
                 color: Colors.black,
                 child: _isCameraActive && controller != null && controller!.value.isInitialized
@@ -237,7 +347,7 @@ class _HomeScreenState extends State<HomeScreen> {
             
             // BOTTOM SECTION: Start/Stop Button
             Expanded(
-              flex: 1,
+              flex: 3,
               child: Container(
                 width: double.infinity,
                 decoration: BoxDecoration(

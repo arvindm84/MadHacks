@@ -30,6 +30,7 @@ def gemini_text():
     memorable summary of the current ambient feeling or setting (e.g., 'A lively outdoor 
     market,' 'The solemn geometry of office buildings'). Do NOT mention the weather, sky, or 
     any safety/navigational concerns.
+    Create like a semi informal tone like a guide you know very well and is friendly. Don't begin with a greeting.
 
     If I have given you an image before and it is basically the same frame with very few changes 
     (like as if the user walked only a few steps ahead), then make a general comment, return 
@@ -46,3 +47,5 @@ def gemini_text():
     )
 
     fs.get_fish_audio(response.text)
+
+gemini_text()

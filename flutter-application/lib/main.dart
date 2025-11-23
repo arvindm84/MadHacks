@@ -6,6 +6,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'osm_service.dart';
 import 'gemini_service.dart';
+import 'fish_audio_service.dart';
 
 late List<CameraDescription> _cameras;
 
@@ -49,11 +50,11 @@ class _HomeScreenState extends State<HomeScreen> {
   CameraController? controller;
   final OSMService _osmService = OSMService();
   late final GeminiService _geminiService;
+  late final FishAudioService _fishAudioService;
 
   // State variables
   String _statusText = "Initializing...";
   List<POI> _nearbyPOIs = [];
-  String _conversationalDescription = "";
   bool _isScanning = false;
   bool _isCameraActive = false; // Controls camera display
   Timer? _scanTimer;
@@ -67,12 +68,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _initialize() async {
     // Initialize Gemini service with API key
-    final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
-    if (apiKey.isEmpty) {
-      setState(() => _statusText = "Error: Missing API key");
+    final geminiApiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
+    if (geminiApiKey.isEmpty) {
+      setState(() => _statusText = "Error: Missing Gemini API key");
       return;
     }
-    _geminiService = GeminiService(apiKey);
+    _geminiService = GeminiService(geminiApiKey);
+    
+    // Initialize Fish Audio service with API key
+    final fishApiKey = dotenv.env['FISH_AUDIO_KEY'] ?? '';
+    if (fishApiKey.isEmpty) {
+      setState(() => _statusText = "Error: Missing Fish Audio API key");
+      return;
+    }
+    _fishAudioService = FishAudioService(fishApiKey);
     
     await _requestPermissions();
     await _initCamera();
@@ -138,19 +147,16 @@ class _HomeScreenState extends State<HomeScreen> {
       // Step 2: Convert to conversational text using Gemini
       final conversationalText = await _geminiService.convertToConversation(top5);
 
+      // Step 3: Convert text to speech using Fish Audio
+      await _fishAudioService.textToSpeech(conversationalText);
+
       if (mounted) {
         setState(() {
           _nearbyPOIs = top5;
-          _conversationalDescription = conversationalText;
         });
       }
     } catch (e) {
       print("Scan error: $e");
-      if (mounted) {
-        setState(() {
-          _conversationalDescription = "Unable to get location description.";
-        });
-      }
     }
   }
 
@@ -164,6 +170,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     controller?.dispose();
     _scanTimer?.cancel();
+    _fishAudioService.dispose();
     super.dispose();
   }
 
@@ -228,12 +235,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             
-            // BOTTOM SECTION: Conversational Description and Start/Stop Button
+            // BOTTOM SECTION: Start/Stop Button
             Expanded(
               flex: 1,
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
@@ -244,37 +250,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Conversational description text
-                    if (_conversationalDescription.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: const Color(0xFF667eea).withOpacity(0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            _conversationalDescription,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              height: 1.5,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                    
-                    // Start/Stop Button
-                    ElevatedButton(
+                child: Center(
+                  child: ElevatedButton(
                     onPressed: _toggleCamera,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(horizontal: 60, vertical: 20),
@@ -336,7 +313,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),

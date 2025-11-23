@@ -10,7 +10,10 @@ response = generate_audio_script.gemini_text()
 print(response)
 
 # Generate speech
-audio = client.tts.convert(text=response)
+audio = client.tts.convert(
+    text=response,
+    reference_id="8ef4a238714b45718ce04243307c57a7"
+    )
 save(audio, "welcome.mp3")
 
 print("✓ Audio saved to welcome.mp3")

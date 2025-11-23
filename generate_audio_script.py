@@ -2,7 +2,7 @@ from google import genai
 from PIL import Image
 
 def gemini_text():
-    GEMINI_API_KEY = 'AIzaSyCc9aGSvySxbPGd2tHT0kem-CXqxISH3a0'
+    GEMINI_API_KEY = 'API_KEY'
 
     sample_image_path = './media/frames/frame_0001.png'
 
@@ -20,7 +20,8 @@ def gemini_text():
             Then, describe the immediate foreground (within three steps), focusing on their location 
             relative to the viewer (e.g., 'to your left') and their potential use or hazard. 
             Conclude with the general setting and any notable ambient conditions (e.g., busy,
-            quiet, light source)."""
+            quiet, light source). Don't be so descriptive, This text generated, when spoken out, 
+            should be only a few seconds long because the user will continue walking farther."""
 
     response = client.models.generate_content(
         model="gemini-2.5-flash", 

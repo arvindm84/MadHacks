@@ -3,7 +3,7 @@ from fishaudio.utils import save
 import generate_audio_script
 
 # Initialize with your API key
-client = FishAudio(api_key=str(${{api-keys.GEMINI_KEY}})) # Sreevatsa's API KEY
+client = FishAudio(api_key=str(${{API-Keys.GEMINI_KEY}})) # Sreevatsa's API KEY
 
 response = generate_audio_script.gemini_text()
 

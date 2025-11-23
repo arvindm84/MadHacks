@@ -7,14 +7,20 @@ client = FishAudio(api_key="b34f820bdc61448e96e1235f94fa60d0") # Sreevatsa's API
 
 response = generate_audio_script.gemini_text()
 
-print(response)
+# # Generate speech
+# audio = client.tts.convert(
+#     text=response,
+#     reference_id="8ef4a238714b45718ce04243307c57a7"
+#     )
+# save(audio, "welcome.mp3")
 
-# Generate speech
-audio = client.tts.convert(
-    text=response,
-    reference_id="8ef4a238714b45718ce04243307c57a7"
-    )
-save(audio, "welcome.mp3")
+# print("✓ Audio saved to welcome.mp3")
 
-print("✓ Audio saved to welcome.mp3")
 
+# Stream directly to file (memory efficient for large audio)
+audio_stream = client.tts.stream(text=response)
+with open("output.mp3", "wb") as f:
+    for chunk in audio_stream:
+        f.write(chunk)  # Write each chunk as it arrives
+
+#The above is still waiting for the entire file to be done before making output.mp3

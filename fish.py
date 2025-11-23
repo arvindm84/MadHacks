@@ -1,9 +1,13 @@
 from fishaudio import FishAudio
 from fishaudio.utils import save
 import generate_audio_script
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Initialize with your API key
-client = FishAudio(api_key=str(${{API-Keys.GEMINI_KEY}})) # Sreevatsa's API KEY
+client = FishAudio(api_key=os.getenv("FISH_AUDIO_KEY")) # Sreevatsa's API KEY
 
 response = generate_audio_script.gemini_text()
 

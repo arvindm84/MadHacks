@@ -197,7 +197,7 @@ class FishAudioService {
         },
         body: jsonEncode({
           'text': text,
-          'reference_id': '8ef4a238714b45718ce04243307c57a7',
+          'reference_id': '73cd7d4e28a14635b583f6cb20e1a040',
           'format': 'mp3',
         }),
       );

@@ -25,7 +25,7 @@ Before running the application, ensure you have the following installed:
 1.  **Clone the Repository**
     ```bash
     git clone https://github.com/arvindm84/Line-of-Sight
-    cd MadHacks
+    cd Line-Of-Sight
     ```
 
 2.  **Setup Environment Variables**
